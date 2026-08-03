@@ -5,9 +5,29 @@ import type { CLIArgs, CLICommand } from '../config/types.js'
 
 import { createCLIArgs } from './args.js'
 import { createBuildCommand } from './commands/build/index.js'
+import { createCountDocumentsCommand } from './commands/collections/countDocuments.js'
+import { createCountVersionsCommand } from './commands/collections/countVersions.js'
+import { createCreateDocumentsCommand } from './commands/collections/createDocuments.js'
+import { createDeleteDocumentsCommand } from './commands/collections/deleteDocuments.js'
+import { createDuplicateDocumentCommand } from './commands/collections/duplicateDocument.js'
+import { createFindDistinctCommand } from './commands/collections/findDistinct.js'
+import { createFindDocumentsCommand } from './commands/collections/findDocuments.js'
+import { createFindVersionByIDCommand } from './commands/collections/findVersionByID.js'
+import { createFindVersionsCommand } from './commands/collections/findVersions.js'
+import { createGetCollectionSchemaCommand } from './commands/collections/getCollectionSchema.js'
+import { createRestoreVersionCommand } from './commands/collections/restoreVersion.js'
+import { createUpdateDocumentCommand } from './commands/collections/updateDocument.js'
 import { createGenerateDBSchemaCommand } from './commands/generateDBSchema.js'
 import { createGenerateImportMapCommand } from './commands/generateImportMap.js'
 import { createGenerateTypesCommand } from './commands/generateTypes.js'
+import { createGetConfigInfoCommand } from './commands/getConfigInfo.js'
+import { createCountGlobalVersionsCommand } from './commands/globals/countGlobalVersions.js'
+import { createFindGlobalCommand } from './commands/globals/findGlobal.js'
+import { createFindGlobalVersionByIDCommand } from './commands/globals/findGlobalVersionByID.js'
+import { createFindGlobalVersionsCommand } from './commands/globals/findGlobalVersions.js'
+import { createGetGlobalSchemaCommand } from './commands/globals/getGlobalSchema.js'
+import { createRestoreGlobalVersionCommand } from './commands/globals/restoreGlobalVersion.js'
+import { createUpdateGlobalCommand } from './commands/globals/updateGlobal.js'
 import { createHelpCommand } from './commands/help.js'
 import { createInfoCommand } from './commands/info.js'
 import { createJobsHandleSchedulesCommand } from './commands/jobs/handleSchedules.js'
@@ -39,6 +59,26 @@ const commands: CLICommand[] = [
   createMigrateResetCommand,
   createMigrateStatusCommand,
   createMigrateCreateCommand,
+  createGetConfigInfoCommand,
+  createCountDocumentsCommand,
+  createCountVersionsCommand,
+  createCreateDocumentsCommand,
+  createDeleteDocumentsCommand,
+  createDuplicateDocumentCommand,
+  createFindDistinctCommand,
+  createFindDocumentsCommand,
+  createFindVersionByIDCommand,
+  createFindVersionsCommand,
+  createGetCollectionSchemaCommand,
+  createRestoreVersionCommand,
+  createUpdateDocumentCommand,
+  createCountGlobalVersionsCommand,
+  createFindGlobalCommand,
+  createFindGlobalVersionByIDCommand,
+  createFindGlobalVersionsCommand,
+  createGetGlobalSchemaCommand,
+  createRestoreGlobalVersionCommand,
+  createUpdateGlobalCommand,
 ]
 
 export const createProgram = async (args: CLIArgs): Promise<Command> => {
