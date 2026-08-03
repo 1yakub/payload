@@ -1,13 +1,20 @@
-import type { SanitizedConfig } from 'payload'
-
 import { writeFileSync } from 'fs'
-import payload from 'payload'
+import type { CLICommand } from 'payload/cli'
+import { Command } from 'payload/cli'
 
 import { testFilePath } from './testFilePath.js'
 
-export const script = async (config: SanitizedConfig) => {
-  await payload.init({ config })
-  const data = await payload.find({ collection: 'users' })
-  writeFileSync(testFilePath, JSON.stringify(data), 'utf-8')
-  process.exit(0)
-}
+export const createStartServerCommand: CLICommand = ({ getPayload, run }) =>
+  new Command('start-server')
+    .description('Write the current users to the CLI test file.')
+    .action((_options, command: Command) =>
+      run({
+        command,
+        handler: async () => {
+          const payload = await getPayload()
+          const data = await payload.find({ collection: 'users' })
+
+          writeFileSync(testFilePath, JSON.stringify(data), 'utf-8')
+        },
+      }),
+    )

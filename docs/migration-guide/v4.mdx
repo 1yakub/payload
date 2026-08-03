@@ -22,6 +22,92 @@ The codemod is idempotent and safe to run on a partially-migrated project.
 
 ## Breaking Changes
 
+### Custom bin scripts replaced by native CLI commands
+
+The `config.bin` API has been removed. Custom commands are now registered through `config.cli.commands` and use the same [Commander](https://github.com/tj/commander.js) API as Payload's built-in commands.
+
+In Payload 3.x, config entries connected a command name to a script path:
+
+```ts
+// payload.config.ts
+export default buildConfig({
+  bin: [
+    {
+      key: 'seed',
+      scriptPath: path.resolve(dirname, 'seed.ts'),
+    },
+  ],
+})
+```
+
+The imported module had to expose a specially named `script` function:
+
+```ts
+// seed.ts
+import type { SanitizedConfig } from 'payload'
+
+import payload from 'payload'
+
+export const script = async (config: SanitizedConfig) => {
+  await payload.init({ config })
+  // Seed the database...
+  process.exit(0)
+}
+```
+
+In Payload 4.0, define a real CLI command instead:
+
+```ts
+// seed.ts
+import type { CLICommand } from 'payload/cli'
+import { Command } from 'payload/cli'
+
+export const createSeedCommand: CLICommand = ({ getPayload, run }) =>
+  new Command('seed')
+    .description('Seed the database.')
+    .option('--clear', 'Delete existing documents first.')
+    .action((options: { clear?: boolean }, command: Command) =>
+      run({
+        command,
+        handler: async () => {
+          const payload = await getPayload()
+
+          if (options.clear) {
+            // Delete existing documents...
+          }
+
+          // Seed the database...
+          payload.logger.info('Successfully seeded!')
+        },
+      }),
+    )
+```
+
+Import the command directly into your Payload config:
+
+```ts
+// payload.config.ts
+import { createSeedCommand } from './seed.js'
+
+export default buildConfig({
+  cli: {
+    commands: [createSeedCommand],
+  },
+})
+```
+
+When migrating custom scripts:
+
+- Replace `bin` entries with `cli.commands`.
+- Replace the exported `script(config)` function with a `CLICommand` that returns a Commander `Command`.
+- Declare positional arguments and options with `.argument()` and `.option()` instead of reading `process.argv` directly.
+- Use the provided `getPayload()` function so Payload can shut down database connections after the command finishes.
+- Execute command work through `run()` to preserve `--cron`, exit code, and error handling behavior. Do not call `process.exit()` from the command.
+
+Custom commands now appear in `payload --help`, receive Commander validation and help generation, and cannot use the same name or alias as a built-in command. Command names are case-sensitive. Because custom commands must be registered before Commander parses input, the Payload config is now loaded before displaying root CLI help.
+
+See [Custom CLI commands](../configuration/overview#custom-cli-commands) for the complete API.
+
 ### Default query depth reduced to `1`
 
 Queries that omit `depth` now populate one relationship level instead of two. This reduces database work and response size by default.

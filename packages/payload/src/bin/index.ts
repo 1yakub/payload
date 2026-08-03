@@ -1,221 +1,91 @@
 /* eslint-disable no-console */
-import { Cron } from 'croner'
-import minimist from 'minimist'
-import { pathToFileURL } from 'node:url'
-import path from 'path'
+import { Command, CommanderError } from 'commander'
 
-import { findConfig } from '../config/find.js'
-import { getPayload, type Payload } from '../index.js'
-import { build } from './build.js'
-import { generateImportMap } from './generateImportMap/index.js'
-import { generateTypes } from './generateTypes.js'
-import { info } from './info.js'
+import type { BinArgs, CLICommand } from '../config/types.js'
+
+import { createBinArgs } from './args.js'
+import { createBuildCommand } from './commands/build/index.js'
+import { createGenerateDBSchemaCommand } from './commands/generateDBSchema.js'
+import { createGenerateImportMapCommand } from './commands/generateImportMap.js'
+import { createGenerateTypesCommand } from './commands/generateTypes.js'
+import { createHelpCommand } from './commands/help.js'
+import { createInfoCommand } from './commands/info.js'
+import { createJobsHandleSchedulesCommand } from './commands/jobs/handleSchedules.js'
+import { createJobsRunCommand } from './commands/jobs/run.js'
+import { createMigrateCreateCommand } from './commands/migrate/create.js'
+import { createMigrateDownCommand } from './commands/migrate/down.js'
+import { createMigrateFreshCommand } from './commands/migrate/fresh.js'
+import { createMigrateCommand } from './commands/migrate/index.js'
+import { createMigrateRefreshCommand } from './commands/migrate/refresh.js'
+import { createMigrateResetCommand } from './commands/migrate/reset.js'
+import { createMigrateStatusCommand } from './commands/migrate/status.js'
+import { createRunCommand } from './commands/run.js'
 import { loadEnv } from './loadEnv.js'
-import { migrate, availableCommands as migrateCommands } from './migrate.js'
 
-// Note: this does not account for any user bin scripts
-const availableScripts = [
-  'build',
-  'generate:db-schema',
-  'generate:importmap',
-  'generate:types',
-  'info',
-  'jobs:run',
-  'jobs:handle-schedules',
-  'run',
-  ...migrateCommands,
-] as const
+const commands: CLICommand[] = [
+  createInfoCommand,
+  createRunCommand,
+  createBuildCommand,
+  createGenerateTypesCommand,
+  createGenerateImportMapCommand,
+  createGenerateDBSchemaCommand,
+  createJobsRunCommand,
+  createJobsHandleSchedulesCommand,
+  createHelpCommand,
+  createMigrateCommand,
+  createMigrateDownCommand,
+  createMigrateFreshCommand,
+  createMigrateRefreshCommand,
+  createMigrateResetCommand,
+  createMigrateStatusCommand,
+  createMigrateCreateCommand,
+]
 
-export const bin = async () => {
+export const createProgram = async (args: BinArgs): Promise<Command> => {
+  const program = new Command()
+    .name('payload')
+    .description('Manage and operate a local Payload project.')
+    .exitOverride()
+    .showHelpAfterError()
+    .showSuggestionAfterError()
+    .option('--cron <expression>', 'Run the command on a cron schedule.')
+  const config = await args.getConfig()
+
+  for (const createCommand of [...commands, ...(config.cli?.commands ?? [])]) {
+    program.addCommand(createCommand(args))
+  }
+
+  for (const command of program.commands) {
+    command.exitOverride()
+  }
+
+  return program
+}
+
+export const bin = async (): Promise<void> => {
   loadEnv()
   process.env.DISABLE_PAYLOAD_HMR = 'true'
 
-  const args = minimist(process.argv.slice(2))
-  const script = (typeof args._[0] === 'string' ? args._[0] : '').toLowerCase()
+  const args = createBinArgs()
 
-  if (args.cron) {
-    new Cron(
-      args.cron,
-      async () => {
-        // If the bin script initializes payload (getPayload), this will only happen once, as getPayload
-        // caches the payload instance on the module scope => no need to manually cache and manage getPayload initialization
-        // outside the Cron here.
-        await runBinScript({ args, script })
-      },
-      {
-        // Do not run consecutive crons if previous crons still ongoing
-        protect: true,
-      },
-    )
+  try {
+    const program = await createProgram(args)
 
-    process.stdin.resume() // Keep the process alive
-
-    return
-  } else {
-    const { payload } = await runBinScript({ args, script })
-    if (payload) {
-      await payload.destroy() // close database connections after running jobs so process can exit cleanly
+    if (process.argv.length === 2) {
+      program.outputHelp()
+    } else {
+      await program.parseAsync(process.argv)
     }
-    process.exit(0)
-  }
-}
-
-async function runBinScript({
-  args,
-  script,
-}: {
-  args: minimist.ParsedArgs
-  script: string
-}): Promise<{
-  /**
-   * Scripts can return a payload instance if it exists. The bin script runner can then safely
-   * shut off the instance, depending on if it's running in a cron job or not.
-   */
-  payload?: Payload
-}> {
-  if (script === 'info') {
-    await info()
-    return {}
-  }
-
-  if (script === 'run') {
-    const scriptPath = args._[1]
-    if (!scriptPath) {
-      console.error('Please provide a script path to run.')
-      process.exit(1)
+  } catch (error) {
+    if (error instanceof CommanderError) {
+      process.exitCode = error.exitCode
+    } else {
+      console.error(error instanceof Error ? error.message : error)
+      process.exitCode = 1
     }
-
-    const absoluteScriptPath = path.resolve(process.cwd(), scriptPath)
-
-    // Modify process.argv to remove 'run' and the script path
-    const originalArgv = process.argv
-    process.argv = [process.argv[0]!, process.argv[1]!, ...args._.slice(2)]
-
-    try {
-      await import(pathToFileURL(absoluteScriptPath).toString())
-    } catch (error) {
-      console.error(`Error running script: ${absoluteScriptPath}`)
-      console.error(error)
-      process.exit(1)
-    } finally {
-      // Restore original process.argv
-      process.argv = originalArgv
+  } finally {
+    if (!args.isScheduled) {
+      await args.destroy()
     }
-    return {}
   }
-
-  const configPath = findConfig()
-  const configPromise = await import(pathToFileURL(configPath).toString())
-  let config = await configPromise
-  if (config.default) {
-    config = await config.default
-  }
-
-  const userBinScript = Array.isArray(config.bin)
-    ? config.bin.find(({ key }: { key: string }) => key === script)
-    : false
-
-  if (userBinScript) {
-    try {
-      const module = await import(pathToFileURL(userBinScript.scriptPath).toString())
-
-      if (!module.script || typeof module.script !== 'function') {
-        console.error(
-          `Could not find "script" function export for script ${userBinScript.key} in ${userBinScript.scriptPath}`,
-        )
-      } else {
-        await module.script(config).catch((err: unknown) => {
-          console.log(`Script ${userBinScript.key} failed, details:`)
-          console.error(err)
-        })
-      }
-    } catch (err) {
-      console.log(`Could not find associated bin script for the ${userBinScript.key} command`)
-      console.error(err)
-    }
-
-    return {}
-  }
-
-  if (script.startsWith('migrate')) {
-    await migrate({ config, parsedArgs: args })
-    return {}
-  }
-
-  if (script === 'generate:types') {
-    await generateTypes(config)
-    return {}
-  }
-
-  if (script === 'generate:importmap') {
-    await generateImportMap(config)
-    return {}
-  }
-
-  if (script === 'build') {
-    await build({ config })
-    return {} // build() awaits next build and owns process exit, propagating its code
-  }
-
-  if (script === 'jobs:run') {
-    const payload = await getPayload({ config }) // Do not setup crons here - this bin script can set up its own crons
-    const limit = args.limit ? parseInt(args.limit, 10) : undefined
-    const queue = args.queue ? args.queue : undefined
-    const allQueues = !!args['all-queues']
-    const handleSchedules = !!args['handle-schedules']
-
-    if (handleSchedules) {
-      await payload.jobs.handleSchedules({
-        allQueues,
-        queue,
-      })
-    }
-
-    await payload.jobs.run({
-      allQueues,
-      limit,
-      queue,
-    })
-
-    return { payload }
-  }
-
-  if (script === 'jobs:handle-schedules') {
-    const payload = await getPayload({ config }) // Do not setup crons here - this bin script can set up its own crons
-    const queue = args.queue ? args.queue : undefined
-    const allQueues = !!args['all-queues']
-
-    await payload.jobs.handleSchedules({
-      allQueues,
-      queue,
-    })
-
-    return { payload }
-  }
-
-  if (script === 'generate:db-schema') {
-    // Barebones instance to access database adapter, without connecting to the DB
-    const payload = await getPayload({ config, disableDBConnect: true, disableOnInit: true }) // Do not setup crons here
-
-    if (typeof payload.db.generateSchema !== 'function') {
-      payload.logger.error({
-        msg: `${payload.db.packageName} does not support database schema generation`,
-      })
-
-      await payload.destroy()
-      process.exit(1)
-    }
-
-    await payload.db.generateSchema({
-      log: args.log === 'false' ? false : true,
-      prettify: args.prettify === 'false' ? false : true,
-    })
-
-    return { payload }
-  }
-
-  console.error(script ? `Unknown command: "${script}"` : 'Please provide a command to run')
-  console.log(`\nAvailable commands:\n${availableScripts.map((c) => `  - ${c}`).join('\n')}`)
-
-  process.exit(1)
 }

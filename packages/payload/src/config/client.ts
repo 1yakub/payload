@@ -20,7 +20,7 @@ import { type ClientGlobalConfig, createClientGlobalConfigs } from '../globals/c
 
 export type ServerOnlyRootProperties = keyof Pick<
   SanitizedConfig,
-  | 'bin'
+  | 'cli'
   | 'cors'
   | 'csrf'
   | 'custom'
@@ -88,7 +88,7 @@ export const serverOnlyConfigProperties: readonly Partial<ServerOnlyRootProperti
   'onInit',
   'secret',
   'hooks',
-  'bin',
+  'cli',
   'i18n',
   'typescript',
   'cors',
