@@ -1,4 +1,4 @@
-import type { BinArgs } from '../../../config/types.js'
+import type { CLIArgs } from '../../../config/types.js'
 import type { BaseDatabaseAdapter } from '../../../database/types.js'
 import type { Payload } from '../../../index.js'
 
@@ -13,7 +13,7 @@ export const initializeMigration = async ({
   args,
   disableDBConnect = false,
 }: {
-  args: BinArgs
+  args: CLIArgs
   disableDBConnect?: boolean
 }): Promise<{ adapter: BaseDatabaseAdapter; payload: Payload }> => {
   process.env.PAYLOAD_MIGRATING = 'true'

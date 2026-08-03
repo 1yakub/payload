@@ -38,7 +38,7 @@ import type {
   ImportMap,
   Imports,
   InternalImportMap,
-} from '../bin/generateImportMap/index.js'
+} from '../cli/generateImportMap/index.js'
 import type {
   Collection,
   CollectionConfig,
@@ -141,7 +141,7 @@ export type ResolvedComponent<
 }
 
 /** Utilities available to every Payload CLI command. */
-export type BinArgs = {
+export type CLIArgs = {
   getConfig: () => Promise<SanitizedConfig>
   getPayload: (options?: Omit<InitOptions, 'config'>) => Promise<Payload>
   run: ({
@@ -154,7 +154,7 @@ export type BinArgs = {
 }
 
 /** A command that Payload can register with its CLI. */
-export type CLICommand = (args: BinArgs) => Command
+export type CLICommand = (args: CLIArgs) => Command
 
 type Prettify<T> = {
   [K in keyof T]: T[K]

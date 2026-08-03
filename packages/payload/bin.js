@@ -17,7 +17,7 @@ process.argv = [...process.argv.slice(0, 2), ...bootstrap.args]
 
 if (disableTranspile) {
   const start = async () => {
-    const { bin } = await import('./dist/bin/index.js')
+    const { bin } = await import('./dist/cli/index.js')
     await bin()
   }
 
@@ -43,7 +43,7 @@ if (disableTranspile) {
       // Use tsx
       let tsImport = (await import('tsx/esm/api')).tsImport
 
-      const { bin } = await tsImport('./dist/bin/index.js', url)
+      const { bin } = await tsImport('./dist/cli/index.js', url)
       await bin()
     }
 
@@ -60,7 +60,7 @@ if (disableTranspile) {
     }
 
     const start = async () => {
-      const { bin } = await import('./dist/bin/index.js')
+      const { bin } = await import('./dist/cli/index.js')
       await bin()
     }
 

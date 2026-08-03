@@ -1,5 +1,5 @@
 import type { Payload, SanitizedConfig } from 'payload'
-import type { BinArgs } from 'payload/cli'
+import type { CLIArgs } from 'payload/cli'
 
 import payload from 'payload'
 import { createProgram } from 'payload/internal'
@@ -13,7 +13,7 @@ export const runCLICommand = async ({
   config: SanitizedConfig
   preparePayload?: ({ payload }: { payload: Payload }) => Promise<void> | void
 }): Promise<void> => {
-  const binArgs: BinArgs = {
+  const cliArgs: CLIArgs = {
     getConfig: () => Promise.resolve(config),
     async getPayload(options = {}) {
       await payload.init({ config, ...options })
@@ -25,7 +25,7 @@ export const runCLICommand = async ({
       await handler()
     },
   }
-  const program = await createProgram(binArgs)
+  const program = await createProgram(cliArgs)
 
   await program.parseAsync(argv, { from: 'user' })
 }

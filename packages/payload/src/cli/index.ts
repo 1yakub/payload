@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import { Command, CommanderError } from 'commander'
 
-import type { BinArgs, CLICommand } from '../config/types.js'
+import type { CLIArgs, CLICommand } from '../config/types.js'
 
-import { createBinArgs } from './args.js'
+import { createCLIArgs } from './args.js'
 import { createBuildCommand } from './commands/build/index.js'
 import { createGenerateDBSchemaCommand } from './commands/generateDBSchema.js'
 import { createGenerateImportMapCommand } from './commands/generateImportMap.js'
@@ -41,7 +41,7 @@ const commands: CLICommand[] = [
   createMigrateCreateCommand,
 ]
 
-export const createProgram = async (args: BinArgs): Promise<Command> => {
+export const createProgram = async (args: CLIArgs): Promise<Command> => {
   const program = new Command()
     .name('payload')
     .description('Manage and operate a local Payload project.')
@@ -66,7 +66,7 @@ export const bin = async (): Promise<void> => {
   loadEnv()
   process.env.DISABLE_PAYLOAD_HMR = 'true'
 
-  const args = createBinArgs()
+  const args = createCLIArgs()
 
   try {
     const program = await createProgram(args)

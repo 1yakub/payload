@@ -2,16 +2,16 @@
 import { Cron } from 'croner'
 import { pathToFileURL } from 'node:url'
 
-import type { BinArgs, SanitizedConfig } from '../config/types.js'
+import type { CLIArgs, SanitizedConfig } from '../config/types.js'
 import type { Payload } from '../index.js'
 
 import { findConfig } from '../config/find.js'
 import { getPayload } from '../index.js'
 
-type BinRuntime = {
+type CLIRuntime = {
   destroy: () => Promise<void>
   readonly isScheduled: boolean
-} & BinArgs
+} & CLIArgs
 
 /**
  * Creates the shared runtime used by all CLI commands.
@@ -20,7 +20,7 @@ type BinRuntime = {
  * shut down cleanly, and runs commands immediately or on a `--cron` schedule. Keeping
  * this work here lets each command focus only on what that command needs to do.
  */
-export const createBinArgs = (): BinRuntime => {
+export const createCLIArgs = (): CLIRuntime => {
   let activePayload: Payload | undefined
   let configPromise: Promise<SanitizedConfig> | undefined
   let isScheduled = false
@@ -37,7 +37,7 @@ export const createBinArgs = (): BinRuntime => {
     return configPromise
   }
 
-  const args: BinRuntime = {
+  const args: CLIRuntime = {
     async destroy() {
       if (!activePayload) {
         return
