@@ -1424,7 +1424,6 @@ export type {
   SanitizedPermissions,
   VerifyConfig,
 } from './auth/types.js'
-export { migrate as migrateCLI } from './bin/commands/migrate/migrateCLI.js'
 export { generateImportMap } from './bin/generateImportMap/index.js'
 export type { ImportMap } from './bin/generateImportMap/index.js'
 
